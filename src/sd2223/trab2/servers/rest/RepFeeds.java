@@ -16,9 +16,6 @@ import static sd2223.trab2.api.java.Result.ErrorCode.*;
 import static sd2223.trab2.api.java.Result.error;
 import static sd2223.trab2.api.java.Result.ok;
 
-
-
-import java.lang.runtime.SwitchBootstraps;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -62,11 +59,10 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
         var key = r.key();
         switch (key) {
-            case "post":
+            case POST:
                 receivePostMsg(r.value(), r.offset());
                 break;
-            case "":
-                break;
+
         }
     }
 
@@ -165,6 +161,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     }
 
     private void receiveSubscribe(String value, long offset) {
+
 
     }
 
