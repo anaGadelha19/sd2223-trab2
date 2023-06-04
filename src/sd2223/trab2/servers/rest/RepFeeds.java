@@ -64,7 +64,6 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         var key = r.key();
         switch (key) {
             case POST:
-                Log.info("Im in the subscriberrrrrrrrrrrr");
                 receivePostMsg(r.value(), r.offset());
                 break;
             case SUB:
@@ -92,7 +91,6 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     @Override
     public Result<Long> postMessage(String user, String pwd, Message msg) {
-        Log.info("Im hereeeeeeeeeeeeeee" + user);
         var preconditionsResult = preconditions.postMessage(user, pwd, msg);
         if (!preconditionsResult.isOK())
             return preconditionsResult;
@@ -102,7 +100,6 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         msg.setCreationTime(System.currentTimeMillis());
 
         long offset = publisher.publish(FEEDS_TOPIC, POST, JSON.encode(msg));
-        Log.info("Publishedddddddddddddddddddd");
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
