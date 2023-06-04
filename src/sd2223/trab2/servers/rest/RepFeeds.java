@@ -26,7 +26,6 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     private static final String FEEDS_TOPIC = "feedsTopic";
     private static final String POST = "post";
-    private static final String REMOVE_MSG = "removeMsg";
     private static final String SUB = "sub";
     private static final String UNSUB = "unsub";
 
@@ -61,6 +60,12 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         switch (key) {
             case POST:
                 receivePostMsg(r.value(), r.offset());
+                break;
+            case SUB:
+                receiveSubscribe(r.value(), r.offset());
+                break;
+            case UNSUB:
+                receiveUnsubscribe(r.value(), r.offset());
                 break;
 
         }
@@ -184,16 +189,39 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     }
 
     private void receiveSubscribe(String value, long offset) {
+        List<String> users = JSON.decode(value, ArrayList.class);
+
+        var ufi = feeds.computeIfAbsent(users.get(0), FeedInfo::new);
+        synchronized (ufi.user()) {
+            ufi.following().add(users.get(1));
+        }
+
+
+        sync.setResult(offset, Result.ok());
 
 
     }
 
     private void receiveUnsubscribe(String value, long offset) {
+        List<String> users = JSON.decode(value, ArrayList.class);
+        FeedInfo ufi = feeds.computeIfAbsent(users.get(0), FeedInfo::new);
+        synchronized (ufi.user()) {
+            ufi.following().remove(users.get(1));
+        }
+        sync.setResult(offset, Result.ok());
 
     }
 
     private void receiveRemoveMessage(String value, long offset) {
+        List<String> auxL = JSON.decode(value, ArrayList.class);
 
+        var ufi = feeds.get(auxL.get(0));
+        long mid = Long.parseLong(auxL.get(1));
+
+        synchronized (ufi.user()) {
+            ufi.messages().remove(mid);
+        }
+        sync.setResult(offset, Result.ok());
     }
 
 
