@@ -36,7 +36,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     private static Logger Log = Logger.getLogger(RestRepFeedsServer.class.getName());
 
 
-    private KafkaPublisher publisher;
+    private final KafkaPublisher publisher;
     private KafkaSubscriber subscriber;
 
     private SyncPoint sync;
@@ -63,18 +63,10 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
         var key = r.key();
         switch (key) {
-            case POST:
-                receivePostMsg(r.value(), r.offset());
-                break;
-            case SUB:
-                receiveSubscribe(r.value(), r.offset());
-                break;
-            case UNSUB:
-                receiveUnsubscribe(r.value(), r.offset());
-                break;
-            case REMOVE_MSG:
-                receiveRemoveMessage(r.value(), r.offset());
-
+            case POST -> receivePostMsg(r.value(), r.offset());
+            case SUB -> receiveSubscribe(r.value(), r.offset());
+            case UNSUB -> receiveUnsubscribe(r.value(), r.offset());
+            case REMOVE_MSG -> receiveRemoveMessage(r.value(), r.offset());
         }
     }
 
