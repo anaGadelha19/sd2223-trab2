@@ -29,6 +29,8 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     private static final String FEEDS_TOPIC = "feedsTopic";
     private static final String POST = "post";
+    private static final String SUB = "sub";
+    private static final String UNSUB = "unsub";
 
     private KafkaPublisher publisher;
     private KafkaSubscriber subscriber;
@@ -89,14 +91,11 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         msg.setCreationTime(System.currentTimeMillis());
 
         long offset = publisher.publish(FEEDS_TOPIC, POST, JSON.encode(msg));
-        sync.waitForResult(offset);
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
         sync.waitForResult(offset);
         return Result.ok(mid);
-
-
     }
 
     @Override
@@ -131,12 +130,30 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     @Override
     public Result<Void> subUser(String user, String userSub, String pwd) {
-        return null;
+        var preconditionsResult = preconditions.subUser(user, userSub, pwd);
+        if (!preconditionsResult.isOK())
+            return preconditionsResult;
+
+        long offset = publisher.publish(FEEDS_TOPIC, SUB, JSON.encode(user + userSub));
+        if (offset < 0) {
+            return error(INTERNAL_ERROR);
+        }
+        sync.waitForResult(offset);
+        return ok();
     }
 
     @Override
     public Result<Void> unsubscribeUser(String user, String userSub, String pwd) {
-        return null;
+        var preconditionsResult = preconditions.subUser(user, userSub, pwd);
+        if (!preconditionsResult.isOK())
+            return preconditionsResult;
+
+        long offset = publisher.publish(FEEDS_TOPIC, UNSUB, JSON.encode(user + userSub));
+        if (offset < 0) {
+            return error(INTERNAL_ERROR);
+        }
+        sync.waitForResult(offset);
+        return ok();
     }
 
     @Override
