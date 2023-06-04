@@ -85,7 +85,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         msg.setCreationTime(System.currentTimeMillis());
 
         long offset = publisher.publish(FEEDS_TOPIC, POST, JSON.encode(msg));
-        //Result<Long> res = sync.waitForResult(offset);
+        sync.waitForResult(offset);
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
