@@ -39,7 +39,6 @@ public class Mastodon implements Feeds {
     private static final String clientSecret = "OOwaxMqAN0KV-pgLvZSxhUR0Qdf7_RrxcWto7XSNaA4";
     private static final String accessTokenStr = "CalNnUfyLu_0QlKxAhjXpqRS1nL7iF-3hOqxDw5gHmE";
 
-
     static final String STATUSES_PATH = "/api/v1/statuses";
     static final String STATUSES_PATH_ID = "/api/v1/statuses/%s";
     static final String TIMELINES_PATH = "/api/v1/timelines/home";
