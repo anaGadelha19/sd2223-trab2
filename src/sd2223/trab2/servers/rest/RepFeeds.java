@@ -16,10 +16,7 @@ import static sd2223.trab2.api.java.Result.ErrorCode.*;
 import static sd2223.trab2.api.java.Result.error;
 import static sd2223.trab2.api.java.Result.ok;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -29,6 +26,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     private static final String FEEDS_TOPIC = "feedsTopic";
     private static final String POST = "post";
+    private static final String REMOVE_MSG = "removeMsg";
     private static final String SUB = "sub";
     private static final String UNSUB = "unsub";
 
@@ -108,11 +106,13 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         if (ufi == null)
             return error(NOT_FOUND);
 
-        synchronized (ufi.user()) {
-            if (!ufi.messages().remove(mid))
-                return error(NOT_FOUND);
+        List<String> userMid = new ArrayList<>();
+        userMid.add(user);
+        userMid.add(Long.toString(mid));
+        long offset = publisher.publish(FEEDS_TOPIC, REMOVE_MSG, JSON.encode(userMid));
+        if (offset < 0) {
+            return error(INTERNAL_ERROR);
         }
-
         //deleteFromUserFeed(user, Set.of(mid));
 
         return ok();
@@ -134,7 +134,10 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         if (!preconditionsResult.isOK())
             return preconditionsResult;
 
-        long offset = publisher.publish(FEEDS_TOPIC, SUB, JSON.encode(user + userSub));
+        List<String> user1User2 = new ArrayList<>();
+        user1User2.add(user);
+        user1User2.add(userSub);
+        long offset = publisher.publish(FEEDS_TOPIC, SUB, JSON.encode(user1User2));
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
@@ -148,7 +151,10 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         if (!preconditionsResult.isOK())
             return preconditionsResult;
 
-        long offset = publisher.publish(FEEDS_TOPIC, UNSUB, JSON.encode(user + userSub));
+        List<String> user1User2 = new ArrayList<>();
+        user1User2.add(user);
+        user1User2.add(userSub);
+        long offset = publisher.publish(FEEDS_TOPIC, UNSUB, JSON.encode(user1User2));
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
