@@ -6,7 +6,6 @@ import sd2223.trab2.api.Message;
 import sd2223.trab2.api.java.Feeds;
 import sd2223.trab2.api.java.Result;
 import sd2223.trab2.servers.Domain;
-import sd2223.trab2.servers.java.JavaFeedsCommon;
 import sd2223.trab2.servers.kafka.KafkaPublisher;
 import sd2223.trab2.servers.kafka.KafkaSubscriber;
 import sd2223.trab2.servers.kafka.RecordProcessor;
@@ -15,8 +14,11 @@ import utils.JSON;
 
 import static sd2223.trab2.api.java.Result.ErrorCode.*;
 import static sd2223.trab2.api.java.Result.error;
+import static sd2223.trab2.api.java.Result.ok;
 
 
+
+import java.lang.runtime.SwitchBootstraps;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     private static final long FEEDS_MID_PREFIX = 1_000_000_000;
+
+    private static final String FEEDS_TOPIC = "feedsTopic";
+    private static final String POST = "post";
 
     private KafkaPublisher publisher;
     private KafkaSubscriber subscriber;
@@ -66,7 +71,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     }
 
 
-    static protected record FeedInfo(String user, Set<Long> messages, Set<String> following, Set<String> followees) {
+    static protected record FeedInfo(String user, Set<Long> messages, Set<String> following, Set<String> followers) {
         public FeedInfo(String user) {
             this(user, new HashSet<>(), new HashSet<>(), ConcurrentHashMap.newKeySet());
         }
@@ -87,22 +92,35 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         msg.setId(mid);
         msg.setCreationTime(System.currentTimeMillis());
 
-        FeedInfo ufi = feeds.computeIfAbsent(user, FeedInfo::new);
-        synchronized (ufi.user()) {
-            ufi.messages().add(mid);
-            messages.putIfAbsent(mid, msg);
-        }
-        var offset = publisher.publish("topic1", "post", json.toJson(msg));
+        long offset = publisher.publish(FEEDS_TOPIC, POST, JSON.encode(msg));
+        sync.waitForResult(offset);
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
         sync.waitForResult(offset);
         return Result.ok(mid);
+
+
     }
 
     @Override
     public Result<Void> removeFromPersonalFeed(String user, long mid, String pwd) {
-        return null;
+        var preconditionsResult = preconditions.removeFromPersonalFeed(user, mid, pwd);
+        if (!preconditionsResult.isOK())
+            return preconditionsResult;
+
+        var ufi = feeds.get(user);
+        if (ufi == null)
+            return error(NOT_FOUND);
+
+        synchronized (ufi.user()) {
+            if (!ufi.messages().remove(mid))
+                return error(NOT_FOUND);
+        }
+
+        //deleteFromUserFeed(user, Set.of(mid));
+
+        return ok();
     }
 
     @Override
@@ -157,4 +175,6 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     private void receiveRemoveMessage(String value, long offset) {
 
     }
+
+
 }
