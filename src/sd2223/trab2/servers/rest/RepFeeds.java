@@ -19,6 +19,7 @@ import static sd2223.trab2.api.java.Result.ok;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Logger;
 
 public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
@@ -32,14 +33,15 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     private static final String SUB = "sub";
     private static final String UNSUB = "unsub";
 
+    private static Logger Log = Logger.getLogger(RestRepFeedsServer.class.getName());
+
+
     private KafkaPublisher publisher;
     private KafkaSubscriber subscriber;
 
     private SyncPoint sync;
 
     final String KAFKA_BROKERS = "kafka:9092";
-
-    private Gson json;
 
 
     protected AtomicLong serial = new AtomicLong(Domain.uuid() * FEEDS_MID_PREFIX);
@@ -48,7 +50,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
 
     public RepFeeds(T preconditions, SyncPoint sync) {
-        json = new Gson();
+
         this.sync = sync;
         this.preconditions = preconditions;
         publisher = KafkaPublisher.createPublisher(KAFKA_BROKERS);
@@ -62,6 +64,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         var key = r.key();
         switch (key) {
             case POST:
+                Log.info("Im in the subscriberrrrrrrrrrrr");
                 receivePostMsg(r.value(), r.offset());
                 break;
             case SUB:
@@ -89,7 +92,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     @Override
     public Result<Long> postMessage(String user, String pwd, Message msg) {
-
+        Log.info("Im hereeeeeeeeeeeeeee" + user);
         var preconditionsResult = preconditions.postMessage(user, pwd, msg);
         if (!preconditionsResult.isOK())
             return preconditionsResult;
@@ -99,6 +102,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         msg.setCreationTime(System.currentTimeMillis());
 
         long offset = publisher.publish(FEEDS_TOPIC, POST, JSON.encode(msg));
+        Log.info("Publishedddddddddddddddddddd");
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }

@@ -83,6 +83,7 @@ public class Mastodon implements Feeds {
 
     @Override
     public Result<Long> postMessage(String user, String pwd, Message msg) {
+
         try {
             Result<Long> result = preconditions.postMessage(user, pwd, msg);
             if (!result.isOK()) {
