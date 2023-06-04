@@ -3,9 +3,11 @@ package sd2223.trab2.servers.rest;
 import com.google.gson.Gson;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import sd2223.trab2.api.Message;
+import sd2223.trab2.api.User;
 import sd2223.trab2.api.java.Feeds;
 import sd2223.trab2.api.java.Result;
 import sd2223.trab2.servers.Domain;
+import sd2223.trab2.servers.java.JavaFeedsCommon;
 import sd2223.trab2.servers.kafka.KafkaPublisher;
 import sd2223.trab2.servers.kafka.KafkaSubscriber;
 import sd2223.trab2.servers.kafka.RecordProcessor;
@@ -16,10 +18,7 @@ import static sd2223.trab2.api.java.Result.ErrorCode.*;
 import static sd2223.trab2.api.java.Result.error;
 import static sd2223.trab2.api.java.Result.ok;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -63,6 +62,12 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         switch (key) {
             case POST:
                 receivePostMsg(r.value(), r.offset());
+                break;
+            case SUB:
+                receiveSubscribe(r.value(), r.offset());
+                break;
+            case UNSUB:
+                receiveUnsubscribe(r.value(), r.offset());
                 break;
 
         }
@@ -108,10 +113,6 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         if (ufi == null)
             return error(NOT_FOUND);
 
-        synchronized (ufi.user()) {
-            if (!ufi.messages().remove(mid))
-                return error(NOT_FOUND);
-        }
 
         //deleteFromUserFeed(user, Set.of(mid));
 
@@ -178,16 +179,39 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     }
 
     private void receiveSubscribe(String value, long offset) {
+        List<String> users = JSON.decode(value, ArrayList.class);
+
+        var ufi = feeds.computeIfAbsent(users.get(0), FeedInfo::new);
+        synchronized (ufi.user()) {
+            ufi.following().add(users.get(1));
+        }
+
+
+        sync.setResult(offset, Result.ok());
 
 
     }
 
     private void receiveUnsubscribe(String value, long offset) {
+        List<String> users = JSON.decode(value, ArrayList.class);
+        FeedInfo ufi = feeds.computeIfAbsent(users.get(0), FeedInfo::new);
+        synchronized (ufi.user()) {
+            ufi.following().remove(users.get(1));
+        }
+        sync.setResult(offset, Result.ok());
 
     }
 
     private void receiveRemoveMessage(String value, long offset) {
+        List<String> auxL = JSON.decode(value, ArrayList.class);
 
+        var ufi = feeds.get(auxL.get(0));
+        long mid = Long.parseLong(auxL.get(1));
+
+        synchronized (ufi.user()) {
+            ufi.messages().remove(mid);
+        }
+        sync.setResult(offset, Result.ok());
     }
 
 
