@@ -120,11 +120,28 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     @Override
     public Result<Message> getMessage(String user, long mid) {
-        return null;
+        var preconditionsResult = preconditions.getMessage(user, mid);
+        if (!preconditionsResult.isOK())
+            return preconditionsResult;
+
+        var ufi = feeds.get(user);
+        if (ufi == null)
+            return error(NOT_FOUND);
+
+        synchronized (ufi.user()) {
+            if (!ufi.messages().contains(mid))
+                return error(NOT_FOUND);
+
+            return ok(messages.get(mid));
+        }
     }
 
     @Override
     public Result<List<Message>> getMessages(String user, long time) {
+        var preconditionsResult = preconditions.getMessages(user, time);
+        if (!preconditionsResult.isOK())
+            return preconditionsResult;
+
         return null;
     }
 
@@ -164,6 +181,10 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     @Override
     public Result<List<String>> listSubs(String user) {
+        var preconditionsResult = preconditions.listSubs(user);
+        if (!preconditionsResult.isOK())
+            return preconditionsResult;
+
         return null;
     }
 
