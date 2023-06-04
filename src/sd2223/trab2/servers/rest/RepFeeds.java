@@ -3,9 +3,13 @@ package sd2223.trab2.servers.rest;
 import com.google.gson.Gson;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import sd2223.trab2.api.Message;
+import sd2223.trab2.api.PushMessage;
 import sd2223.trab2.api.java.Feeds;
 import sd2223.trab2.api.java.Result;
 import sd2223.trab2.servers.Domain;
+import sd2223.trab2.servers.java.JavaFeedsCommon;
+import sd2223.trab2.servers.java.JavaFeedsPush;
+import sd2223.trab2.servers.java.JavaFeedsPushPreconditions;
 import sd2223.trab2.servers.kafka.KafkaPublisher;
 import sd2223.trab2.servers.kafka.KafkaSubscriber;
 import sd2223.trab2.servers.kafka.RecordProcessor;
@@ -39,20 +43,20 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
     private final KafkaPublisher publisher;
     private KafkaSubscriber subscriber;
 
-    private SyncPoint sync;
+    private SyncPoint<Result<Long>> sync;
 
     final String KAFKA_BROKERS = "kafka:9092";
 
 
     protected AtomicLong serial = new AtomicLong(Domain.uuid() * FEEDS_MID_PREFIX);
 
-    final protected T preconditions;
+    final protected JavaFeedsPushPreconditions preconditions;
 
 
-    public RepFeeds(T preconditions, SyncPoint sync) {
+    public RepFeeds() {
 
-        this.sync = sync;
-        this.preconditions = preconditions;
+        this.sync = SyncPoint.getInstance();
+        this.preconditions = new JavaFeedsPushPreconditions();
         publisher = KafkaPublisher.createPublisher(KAFKA_BROKERS);
         subscriber = KafkaSubscriber.createSubscriber(KAFKA_BROKERS, List.of("kafkadirectory"), "earliest");
         subscriber.start(false, (r) -> onReceive(r));
@@ -68,6 +72,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
             case UNSUB -> receiveUnsubscribe(r.value(), r.offset());
             case REMOVE_MSG -> receiveRemoveMessage(r.value(), r.offset());
         }
+        sync.setResult(r.offset(), Result.ok());
     }
 
 
@@ -95,7 +100,8 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
-        sync.waitForResult(offset);
+            sync.waitForResult(offset);
+
         return Result.ok(mid);
     }
 
@@ -116,7 +122,7 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         if (offset < 0) {
             return error(INTERNAL_ERROR);
         }
-        //deleteFromUserFeed(user, Set.of(mid));
+        sync.waitForResult(offset);
 
         return ok();
     }
@@ -145,7 +151,10 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
         if (!preconditionsResult.isOK())
             return preconditionsResult;
 
-        return null;
+        var ufi = feeds.computeIfAbsent(user, FeedInfo::new);
+        synchronized (ufi.user()) {
+            return ok(ufi.messages().stream().map(messages::get).filter(m -> m.getCreationTime() > time).toList());
+        }
     }
 
     @Override
@@ -193,6 +202,10 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     @Override
     public Result<Void> deleteUserFeed(String user) {
+        var preconditionsResult = preconditions.deleteUserFeed(user);
+        if (!preconditionsResult.isOK())
+            return preconditionsResult;
+
         return null;
     }
 

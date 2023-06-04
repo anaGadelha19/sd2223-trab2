@@ -24,7 +24,7 @@ public class RestRepFeedsServer extends AbstractRestServer {
     protected void registerResources(ResourceConfig config) {
 
         SyncPoint<String> sync = new SyncPoint<>();
-        config.register(new RestRepFeedsResource(sync, new RepFeeds(new JavaFeedsPushPreconditions(), sync)));
+        config.register(new RestRepFeedsResource<>(new RepFeeds()));
         config.register(GenericExceptionMapper.class);
 
     }

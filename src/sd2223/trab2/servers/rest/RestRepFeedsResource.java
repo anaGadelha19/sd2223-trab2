@@ -10,17 +10,13 @@ import java.util.List;
 
 public class RestRepFeedsResource<T extends Feeds> extends RestResource implements FeedsService {
 
-    final SyncPoint sync;
     final T impl;
 
-    final JavaFeedsPushPreconditions preconditions; //IDKK
+    final JavaFeedsPushPreconditions preconditions;
 
-    public RestRepFeedsResource(SyncPoint sync, T impl) {
+    public RestRepFeedsResource(T impl) {
         preconditions = new JavaFeedsPushPreconditions();
-        this.sync = sync;
         this.impl = impl;
-        //impl = new RepFeeds(preconditions, sync);
-
     }
 
 
@@ -37,13 +33,13 @@ public class RestRepFeedsResource<T extends Feeds> extends RestResource implemen
 
     @Override
     public Message getMessage(String user, long mid) {
-        return (Message) super.fromJavaResult(impl.getMessage(user, mid));
+        return super.fromJavaResult(impl.getMessage(user, mid));
     }
 
     @Override
     public List<Message> getMessages(String user, long time) {
 
-        return (List<Message>) super.fromJavaResult(impl.getMessages(user, time));
+        return super.fromJavaResult(impl.getMessages(user, time));
     }
 
     @Override
@@ -60,7 +56,7 @@ public class RestRepFeedsResource<T extends Feeds> extends RestResource implemen
 
     @Override
     public List<String> listSubs(String user) {
-        return (List<String>) super.fromJavaResult(impl.listSubs(user));
+        return super.fromJavaResult(impl.listSubs(user));
     }
 
     @Override
