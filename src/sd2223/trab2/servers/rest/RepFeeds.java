@@ -26,6 +26,9 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
 
     private static final String FEEDS_TOPIC = "feedsTopic";
     private static final String POST = "post";
+
+    private static final String REMOVE_MSG = "removeMsg";
+
     private static final String SUB = "sub";
     private static final String UNSUB = "unsub";
 
@@ -67,6 +70,8 @@ public class RepFeeds<T extends Feeds> implements Feeds, RecordProcessor {
             case UNSUB:
                 receiveUnsubscribe(r.value(), r.offset());
                 break;
+            case REMOVE_MSG:
+                receiveRemoveMessage(r.value(), r.offset());
 
         }
     }
